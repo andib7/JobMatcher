@@ -5,19 +5,22 @@ function App() {
   const [parsedText, setParsedText] = useState("");
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
 
   const handleFileChange = (e) => {
     setFile(e.target.files[0]);
     setParsedText("");
     setQuestions([]);
+    setError(null);
   };
 
   const handleUpload = async () => {
     if (!file) {
-      alert("Please select a file first");
+      setError("Please select a file first.");
       return;
     }
     setLoading(true);
+    setError(null);
 
     try {
       // Upload resume
@@ -30,9 +33,7 @@ function App() {
       });
 
       if (!uploadResponse.ok) {
-        alert("Upload failed");
-        setLoading(false);
-        return;
+        throw new Error("Upload failed");
       }
 
       const uploadData = await uploadResponse.json();
@@ -46,56 +47,58 @@ function App() {
       });
 
       if (!questionsResponse.ok) {
-        alert("Failed to get questions");
-        setLoading(false);
-        return;
+        throw new Error("Failed to get questions");
       }
 
       const questionsData = await questionsResponse.json();
-      console.log("questionsData:", questionsData);
-
-      if (questionsData.questions) {
-        setQuestions(questionsData.questions);
-      } else {
-        alert("Backend error: " + (questionsData.error || "Unknown error"));
-        setQuestions([]);
-      }
-    } catch (error) {
-      alert("Error during upload or question fetch");
-      console.error(error);
+      if (questionsData.error) throw new Error(questionsData.error);
+      setQuestions(questionsData.questions || []);
+    } catch (err) {
+      setError(err.message || "Unknown error occurred");
+      setQuestions([]);
+      setParsedText("");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div style={{ padding: 20, maxWidth: 800, margin: "auto" }}>
+    <div style={{ padding: 20, maxWidth: 800, margin: "auto", fontFamily: "Arial, sans-serif" }}>
       <h1>Resume Upload & AI Follow-up Questions</h1>
 
       <input type="file" accept="application/pdf" onChange={handleFileChange} />
-      <button onClick={handleUpload} disabled={loading} style={{ marginLeft: 10 }}>
+      <button 
+        onClick={handleUpload} 
+        disabled={loading} 
+        style={{ marginLeft: 10, padding: "6px 12px", cursor: loading ? "not-allowed" : "pointer" }}
+      >
         {loading ? "Processing..." : "Upload & Get Questions"}
       </button>
+
+      {error && (
+        <div style={{ marginTop: 20, color: "red", fontWeight: "bold" }}>
+          Error: {error}
+        </div>
+      )}
 
       {parsedText && (
         <>
           <h2>Extracted Resume Text (first 500 chars):</h2>
-          <pre
-            style={{
-              whiteSpace: "pre-wrap",
-              maxHeight: 200,
-              overflowY: "auto",
-              backgroundColor: "#eee",
-              padding: 10,
-            }}
-          >
-            {parsedText.slice(0, 500)}
-            {parsedText.length > 500 ? "..." : ""}
+          <pre style={{ 
+            whiteSpace: "pre-wrap", 
+            maxHeight: 200, 
+            overflowY: "auto", 
+            backgroundColor: "#f0f0f0", 
+            padding: 10, 
+            borderRadius: 4,
+            border: "1px solid #ccc"
+          }}>
+            {parsedText.slice(0, 500)}{parsedText.length > 500 ? "..." : ""}
           </pre>
         </>
       )}
 
-      {questions.length > 0 && (
+      {questions.length > 0 ? (
         <>
           <h2>AI Follow-up Questions:</h2>
           <ul>
@@ -104,7 +107,9 @@ function App() {
             ))}
           </ul>
         </>
-      )}
+      ) : !loading && parsedText ? (
+        <p><i>No questions generated.</i></p>
+      ) : null}
     </div>
   );
 }
