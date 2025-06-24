@@ -1,0 +1,18 @@
+# === Node (React frontend) ===
+client/node_modules/
+client/build/
+client/.env
+client/.DS_Store
+
+# === Python (FastAPI backend) ===
+backend/venv/
+backend/__pycache__/
+backend/*.pyc
+backend/.env
+
+# === General system files ===
+.DS_Store
+*.log
+*.sqlite3
+*.db
+.env
